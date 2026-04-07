@@ -1,0 +1,41 @@
+services:
+  prompt-library:
+    build:
+      context: .
+      dockerfile: services/prompt-library/Dockerfile
+    container_name: prompt-library
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL}
+      - PROMPT_QUALITY_THRESHOLD=${PROMPT_QUALITY_THRESHOLD}
+      - EXPORT_FORMAT=${EXPORT_FORMAT}
+      - RCA_MODE=${RCA_MODE}
+    ports:
+      - "7000:7000"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: prometheus
+    volumes:
+      - ./ops/configs/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/configs/alerts.yml:/etc/prometheus/alerts.yml:ro
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.1.4
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/lab3-prompt-library.json
+    volumes:
+      - ./ops/configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
